@@ -1,0 +1,2360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TB Screening System</title>
+
+<style>
+
+  @font-face {
+    font-family: "Source Sans 3";
+    src: url("/static/fonts/SourceSans3-Variable.woff2") format("woff2");
+    font-weight: 200 900;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  :root {
+    --ink: #17283d;
+    --accent: #1f6f73;
+    --accent-dark: #185a5d;
+    --page: #f5f6f7;
+    --white: #ffffff;
+    --line: #d8dde3;
+    --line-soft: #e8ebef;
+    --line-strong: #b4bdc7;
+    --hover: #eef1f4;
+    --text: #1c2733;
+    --muted: #566475;
+    --pos: #9c3f28;
+    --pos-bg: #f6ebe6;
+    --neg: #2c6a5a;
+    --neg-bg: #e9f1ee;
+    --warn: #7d5a0e;
+    --warn-bg: #f5eedd;
+    --font: "Source Sans 3", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--page);
+  }
+
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  [hidden], .hidden { display: none !important; }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .ic {
+    width: 16px; height: 16px;
+    fill: none; stroke: currentColor;
+    stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  h1 { font-size: 26px; font-weight: 600; line-height: 1.2; color: var(--ink); }
+  h2 { font-size: 26px; font-weight: 600; line-height: 1.2; color: var(--ink); }
+  h3 { font-size: 19px; font-weight: 600; line-height: 1.25; color: var(--ink); }
+
+  .muted { color: var(--muted); }
+  .helper { font-size: 14px; color: var(--muted); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* fields */
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 14.5px; font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .field label small { font-weight: 400; font-size: 14px; color: var(--muted); }
+
+  input[type="text"], input[type="email"], input[type="password"], input[type="number"],
+  input[type="tel"], input[type="search"], input[type="date"], select {
+    width: 100%;
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--white);
+    font-size: 15px;
+    font-weight: 400;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input.invalid, select.invalid { border-color: var(--pos); }
+  input:disabled, select:disabled { background: var(--page); color: var(--muted); }
+
+  /* autofill shouldn't turn some fields blue */
+  input:-webkit-autofill, select:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 40px var(--white) inset;
+    -webkit-text-fill-color: var(--text);
+    caret-color: var(--text);
+  }
+
+  .error-msg { color: var(--pos); font-size: 14px; min-height: 20px; margin-top: 6px; }
+
+  /* buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    font-size: 14.5px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: var(--white); }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+  .btn-secondary { background: var(--white); border-color: var(--line-strong); color: var(--ink); }
+  .btn-secondary:hover:not(:disabled) { background: var(--hover); }
+  .btn-sm { height: 32px; padding: 0 12px; }
+  .btn-block { width: 100%; }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .link-btn {
+    background: none; border: none; padding: 0;
+    color: var(--accent-dark); font-size: 14.5px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .link-btn:hover { text-decoration: underline; }
+
+  .spinner {
+    width: 15px; height: 15px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.5s; } }
+
+  /* sign in, setup and choose-password screens */
+  .gate { display: none; }
+  .gate.active {
+    display: flex;
+    min-height: 100vh;
+    align-items: center; justify-content: center;
+    padding: 24px 16px;
+  }
+  .auth-card {
+    width: 100%; max-width: 380px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 28px;
+  }
+  .auth-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 18px; font-weight: 600; color: var(--ink);
+    margin-bottom: 22px;
+  }
+  .auth-card h1 { margin-bottom: 4px; }
+  .auth-card .helper { margin-bottom: 20px; }
+  .auth-foot { margin-top: 16px; font-size: 14px; color: var(--muted); }
+
+  .brand img, .auth-brand img { height: 36px; width: auto; display: block; }
+
+  /* top bar */
+  .topbar { background: var(--white); border-bottom: 1px solid var(--line); }
+  .topbar-in {
+    max-width: 1040px; margin: 0 auto;
+    padding: 0 20px;
+    min-height: 56px;
+    display: flex; align-items: stretch; gap: 28px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 18px; font-weight: 600; color: var(--ink);
+    padding: 8px 0;
+  }
+  .nav { display: flex; align-items: stretch; gap: 2px; flex: 1; }
+  .nav-link, .dd > button {
+    background: none; border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0 12px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 15px; font-weight: 500;
+    color: var(--muted);
+  }
+  .nav-link:hover, .dd > button:hover { background: var(--hover); color: var(--ink); }
+  .nav-link.current, .dd > button.current { color: var(--accent-dark); border-bottom-color: var(--accent); }
+
+  .dd { position: relative; display: flex; }
+  .dd-menu {
+    position: absolute; top: 100%; left: 0;
+    min-width: 200px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 4px;
+    z-index: 20;
+  }
+  .dd-menu.right { left: auto; right: 0; }
+  .dd-menu button {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    width: 100%;
+    background: none; border: none;
+    padding: 8px 10px;
+    border-radius: 3px;
+    font-size: 15px; font-weight: 500; color: var(--text);
+    text-align: left;
+  }
+  .dd-menu button:hover { background: var(--hover); }
+  .dd-menu button.current { color: var(--ink); font-weight: 600; }
+  .dd-menu .state { font-size: 13px; font-weight: 400; color: var(--muted); }
+
+  .menu-toggle {
+    display: none;
+    margin-left: auto;
+    align-self: center;
+    background: none;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    height: 36px; padding: 0 10px;
+    align-items: center; gap: 6px;
+    font-size: 14.5px; font-weight: 500; color: var(--ink);
+  }
+  .menu-toggle:hover { background: var(--hover); }
+
+  .content { max-width: 880px; margin: 0 auto; padding: 28px 20px 56px; }
+
+  .page-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    margin-bottom: 18px;
+  }
+  .page-head .helper { margin-top: 2px; }
+
+  .panel {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+  .sec { padding: 20px 22px; border-bottom: 1px solid var(--line-soft); }
+  .sec:last-child { border-bottom: none; }
+  .sec-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 14px;
+  }
+  .sec-head .helper { margin-left: auto; }
+
+  .fields { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0 16px; }
+  .span-2 { grid-column: span 2; }
+  .span-3 { grid-column: span 3; }
+  .span-4 { grid-column: span 4; }
+
+  /* segmented switch, also used for the records filter */
+  .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 4px; overflow: hidden; }
+  .seg button {
+    background: var(--white); border: none;
+    padding: 6px 14px;
+    font-size: 14.5px; font-weight: 500; color: var(--muted);
+  }
+  .seg button + button { border-left: 1px solid var(--line-strong); }
+  .seg button:hover:not(.on) { background: var(--hover); }
+  .seg button.on { background: var(--ink); color: var(--white); }
+  .seg button span { margin-left: 6px; font-weight: 400; opacity: 0.8; }
+
+  .lookup-row { display: flex; gap: 10px; max-width: 420px; }
+  .lookup-row input { text-transform: uppercase; }
+  .lookup-row input::placeholder { text-transform: none; }
+
+  .found { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px 20px; }
+  .kv dt { font-size: 14px; color: var(--muted); }
+  .kv dd { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .found .field { width: 160px; margin: 16px 0 0; }
+
+  /* x-ray upload */
+  .upload {
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    padding: 14px;
+    background: var(--white);
+  }
+  .upload.dragging { background: var(--hover); }
+  .upload.invalid { border-color: var(--pos); }
+  .upload-empty { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .preview { display: flex; gap: 16px; align-items: flex-start; }
+  .preview-img {
+    width: 140px; height: 140px;
+    object-fit: contain;
+    background: #0b0f14;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .preview-info .fname { font-weight: 600; color: var(--ink); word-break: break-all; }
+  .preview-info .fmeta { font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+  .upload-hint { font-size: 14px; color: var(--muted); margin-top: 8px; }
+
+  /* symptoms */
+  .q-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .q-row:first-child { padding-top: 0; }
+  .q-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .q-row.invalid .q-text { color: var(--pos); font-weight: 600; }
+
+  .yn { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+  .yn input { position: absolute; opacity: 0; pointer-events: none; }
+  .yn label {
+    padding: 6px 20px;
+    font-size: 14.5px; font-weight: 500; color: var(--muted);
+    cursor: pointer; user-select: none;
+    background: var(--white);
+  }
+  .yn label:hover { background: var(--hover); }
+  .yn label + input + label { border-left: 1px solid var(--line-strong); }
+  .yn input:checked + label.yes { background: var(--ink); color: var(--white); }
+  .yn input:checked + label.no { background: #dde2e8; color: var(--ink); }
+  .yn input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  .submit-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .submit-row .error-msg { margin: 0; flex: 1; }
+
+  /* tags */
+  .tag {
+    display: inline-block;
+    font-size: 13px; font-weight: 500;
+    padding: 1px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .tag.pos { color: var(--pos); background: var(--pos-bg); }
+  .tag.neg { color: var(--neg); background: var(--neg-bg); }
+  .tag.none { color: var(--muted); background: #eceff2; }
+  .tag.soon { color: var(--warn); background: var(--warn-bg); }
+  .tag.yes { color: var(--ink); background: #e0e5ea; }
+
+  /* report */
+  .report-top {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+    padding: 20px 22px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .report-top .helper { margin-top: 2px; }
+  .report-top .ref { text-align: right; font-size: 14px; color: var(--muted); }
+  .report-top .ref b { display: block; font-weight: 600; color: var(--ink); }
+  .report-meta { padding: 16px 22px; border-bottom: 1px solid var(--line-soft); }
+
+  .verdict { border-left: 4px solid; padding: 12px 16px; border-radius: 0 4px 4px 0; }
+  .verdict.positive { background: var(--pos-bg); border-color: var(--pos); }
+  .verdict.positive .v-main { color: var(--pos); }
+  .verdict.negative { background: var(--neg-bg); border-color: var(--neg); }
+  .verdict.negative .v-main { color: var(--neg); }
+  .v-main { font-size: 24px; font-weight: 600; line-height: 1.2; }
+  .v-conf { font-size: 14px; color: var(--text); margin-top: 2px; }
+  .v-note { font-size: 14px; color: var(--text); margin-top: 10px; }
+
+  .scores { margin-top: 16px; max-width: 420px; }
+  .scores td:last-child { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .images { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .img-box {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: #0b0f14;
+    overflow: hidden;
+  }
+  .img-box img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  figcaption { font-size: 14px; color: var(--muted); margin-top: 6px; }
+
+  .result-actions { display: flex; justify-content: space-between; gap: 12px; }
+
+  /* tables */
+  .table-wrap { overflow-x: auto; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  .tbl th {
+    text-align: left;
+    font-size: 14px; font-weight: 600; color: var(--muted);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .tbl td { padding: 10px 16px; border-bottom: 1px solid var(--line-soft); }
+  .tbl tr:last-child td { border-bottom: none; }
+  .tbl.plain td { padding-left: 0; padding-right: 0; }
+  .tbl.click tbody tr { cursor: pointer; }
+  .tbl.click tbody tr:hover { background: #f3f5f7; }
+  .p-name { font-weight: 600; color: var(--ink); }
+  .p-id { font-size: 13.5px; color: var(--muted); }
+  .row-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .empty { padding: 36px 20px; text-align: center; color: var(--muted); }
+  .empty h3 { margin-bottom: 4px; }
+  .empty .btn { margin-top: 14px; }
+
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .toolbar input { width: 250px; height: 36px; }
+
+  /* staff */
+  .staff-form {
+    display: grid; grid-template-columns: 1.4fr 1.4fr 1fr auto; gap: 0 14px;
+    align-items: end;
+  }
+  .staff-form .btn { margin-bottom: 16px; }
+  .temp-box {
+    margin-top: 8px;
+    border: 1px solid var(--line-strong);
+    background: #f8f9fa;
+    border-radius: 4px;
+    padding: 14px 16px;
+  }
+  .temp-pass { font-size: 24px; font-weight: 600; letter-spacing: 0.06em; color: var(--ink); margin: 2px 0 6px; }
+  .temp-box p { font-size: 14px; color: var(--muted); margin-bottom: 10px; max-width: 520px; }
+  .staff-table tr.off td { opacity: 0.55; }
+  .staff-table .you { font-size: 13.5px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .pw-form { max-width: 360px; }
+
+  /* patient record */
+  .p-header {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+    padding: 20px 22px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .checkup-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+  .checkup-row .field { margin: 0; width: 190px; }
+  .checkup-status { font-size: 14px; color: var(--muted); padding-bottom: 8px; }
+  .checkup-status.saved { color: var(--neg); }
+
+  .h-item { display: flex; gap: 20px; align-items: flex-start; padding: 16px 22px; border-bottom: 1px solid var(--line-soft); }
+  .h-item:last-child { border-bottom: none; }
+  .h-info { flex: 1; min-width: 0; }
+  .h-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .h-date { font-weight: 600; color: var(--ink); }
+  .h-meta { font-size: 14px; color: var(--muted); margin-top: 3px; }
+  .h-meta b { color: var(--ink); font-weight: 600; }
+  .h-symptoms { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .h-thumbs { display: flex; gap: 10px; flex-shrink: 0; }
+  .h-thumbs a { display: block; font-size: 13px; color: var(--muted); text-decoration: none; text-align: center; }
+  .h-thumbs a:hover { color: var(--ink); }
+  .h-thumbs img {
+    display: block; width: 84px; height: 84px; object-fit: cover;
+    border-radius: 4px; background: #0b0f14; margin-bottom: 3px;
+  }
+
+  .step-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .mode-switch { margin-bottom: 18px; }
+  .fields-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .bmi { font-size: 14.5px; color: var(--muted); margin: -4px 0 4px; min-height: 22px; }
+  .sub-head { font-size: 19px; margin-bottom: 12px; }
+  .sub-gap { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line-soft); }
+  .step-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+  #printReport { display: none; }
+
+  /* small screens */
+  @media (max-width: 760px) {
+    .topbar-in { flex-wrap: wrap; gap: 0; padding: 8px 16px; }
+    .menu-toggle { display: flex; }
+    .nav, .user-dd { display: none; width: 100%; }
+    .topbar.open .nav { display: flex; flex-direction: column; margin-top: 8px; border-top: 1px solid var(--line-soft); padding-top: 4px; }
+    .topbar.open .user-dd { display: flex; border-top: 1px solid var(--line-soft); margin-top: 4px; padding-top: 4px; }
+    .nav-link, .dd > button { height: 44px; border-bottom: none; border-left: 2px solid transparent; width: 100%; }
+    .nav-link.current, .dd > button.current { border-bottom-color: transparent; border-left-color: var(--ink); }
+    .dd { flex-direction: column; width: 100%; }
+    .dd-menu { position: static; border: none; padding: 0 0 0 14px; }
+
+    .content { padding: 20px 16px 40px; }
+    .sec, .report-top, .report-meta, .p-header, .h-item { padding-left: 16px; padding-right: 16px; }
+    .fields { grid-template-columns: 1fr; }
+    .span-2, .span-3, .span-4 { grid-column: auto; }
+    .page-head { flex-wrap: wrap; }
+    .sec-head { flex-wrap: wrap; }
+    .sec-head .helper { margin-left: 0; width: 100%; }
+    .preview { flex-direction: column; }
+    .q-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .submit-row { flex-direction: column-reverse; align-items: stretch; }
+    .images { grid-template-columns: 1fr; }
+    .result-actions { flex-direction: column-reverse; }
+    .toolbar input { width: 100%; }
+    .staff-form { grid-template-columns: 1fr; }
+    .p-header { flex-direction: column; }
+    .h-item { flex-direction: column; }
+    .report-top { flex-direction: column; }
+    .report-top .ref { text-align: left; }
+  }
+
+  @media print {
+    @page { size: A4; margin: 16mm 16mm 18mm; }
+    body { background: #fff; font-size: 11pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #loginView, #appView, .gate { display: none !important; }
+    #printReport { display: block !important; color: #000; }
+
+    .pr-head {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 10px; margin-bottom: 14px;
+    }
+    .pr-brand { display: flex; align-items: center; gap: 10px; }
+    .pr-brand img { height: 12mm; width: auto; }
+    .pr-head h1 { font-size: 20pt; }
+    .pr-head p, .pr-head .pr-ref { font-size: 10pt; color: #444; }
+    .pr-head .pr-ref { text-align: right; }
+    .pr-head .pr-ref b { color: #000; font-weight: 600; }
+
+    .pr-patient { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid #bbb; margin-bottom: 14px; }
+    .pr-patient div { padding: 6px 10px; border-right: 1px solid #ddd; }
+    .pr-patient div:last-child { border-right: none; }
+    .pr-patient dt { font-size: 9pt; color: #555; }
+    .pr-patient dd { font-size: 11pt; font-weight: 600; }
+
+    .pr-label { font-size: 13pt; font-weight: 600; color: var(--ink); margin: 14px 0 6px; }
+    .pr-result { border-left: 5px solid; padding: 8px 12px; }
+    .pr-result.positive { border-color: #9c3f28; }
+    .pr-result.negative { border-color: #2c6a5a; }
+    .pr-result .r-main { font-size: 20pt; font-weight: 600; line-height: 1.2; }
+    .pr-result.positive .r-main { color: #9c3f28; }
+    .pr-result.negative .r-main { color: #2c6a5a; }
+    .pr-result .r-conf { font-size: 10.5pt; margin-top: 2px; }
+
+    .pr-images { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
+    .pr-images figure { margin: 0; break-inside: avoid; }
+    .pr-images img { display: block; width: 100%; height: 62mm; object-fit: contain; background: #000; border: 1px solid #bbb; }
+    .pr-images figcaption { font-size: 9pt; color: #555; }
+
+    .pr-table { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+    .pr-table td { border: 1px solid #ccc; padding: 4px 9px; }
+    .pr-table td:last-child { width: 70px; text-align: center; font-weight: 600; }
+
+    .pr-sign { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 32px; font-size: 10pt; color: #444; }
+    .pr-sign div { border-top: 1px solid #888; padding-top: 4px; }
+    .pr-foot { margin-top: 24px; padding-top: 8px; border-top: 1px solid #bbb; font-size: 10pt; color: #333; }
+  }
+</style>
+</head>
+<body>
+
+<!-- icons, drawn here so nothing loads from the internet -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
+  <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M6 14h12v7H6z"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+</svg>
+
+<section id="loginView" class="view gate active">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <img src="/static/logo.png" alt="" onerror="this.style.display='none'">
+      <span>TB Screening System</span>
+    </div>
+    <h1>Sign in</h1>
+    <p class="helper"></p>
+
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password">
+      </div>
+      <p class="error-msg" id="loginError"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Sign in</button>
+    </form>
+    <p class="auth-foot">Forgot your password? Ask your supervisor to reset it.</p>
+  </div>
+</section>
+
+<section id="setupView" class="view gate">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <img src="/static/logo.png" alt="" onerror="this.style.display='none'">
+      <span>TB Screening System</span>
+    </div>
+    <h1>Create supervisor account</h1>
+    <p class="helper">This account can add the other staff.</p>
+
+    <form id="setupForm" novalidate>
+      <div class="field">
+        <label for="setupName">Full name</label>
+        <input type="text" id="setupName" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="setupEmail">Work email</label>
+        <input type="email" id="setupEmail" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="setupPass">Password <small>(at least 8 characters)</small></label>
+        <input type="password" id="setupPass" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="setupPass2">Confirm password</label>
+        <input type="password" id="setupPass2" autocomplete="new-password">
+      </div>
+      <p class="error-msg" id="setupError"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="setupBtn">Create account</button>
+    </form>
+  </div>
+</section>
+
+<section id="passwordView" class="view gate">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <img src="/static/logo.png" alt="" onerror="this.style.display='none'">
+      <span>TB Screening System</span>
+    </div>
+    <h1>Choose your password</h1>
+    <p class="helper" id="pwIntro">You signed in with a temporary password. Choose your own to continue.</p>
+
+    <form id="firstPwForm" novalidate>
+      <div class="field">
+        <label for="fpCurrent">Temporary password</label>
+        <input type="password" id="fpCurrent" autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label for="fpNew">New password <small>(at least 8 characters)</small></label>
+        <input type="password" id="fpNew" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="fpNew2">Confirm new password</label>
+        <input type="password" id="fpNew2" autocomplete="new-password">
+      </div>
+      <p class="error-msg" id="fpError"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="fpBtn">Save and continue</button>
+    </form>
+    <p class="auth-foot"><button type="button" class="link-btn" onclick="signOut()">Not you? Sign out</button></p>
+  </div>
+</section>
+
+<section id="appView" class="view">
+  <header class="topbar" id="topbar">
+    <div class="topbar-in">
+      <div class="brand">
+        <img src="/static/lung.png" alt="" onerror="this.style.display='none'">
+        <span>TB Screening System</span>
+      </div>
+
+      <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mainNav">
+        <svg class="ic"><use href="#i-menu"/></svg> Menu
+      </button>
+
+      <nav class="nav" id="mainNav" aria-label="Main">
+        <button type="button" class="nav-link current" id="navScreen" onclick="newScreening()">New screening</button>
+        <button type="button" class="nav-link" id="navToday" onclick="openToday()">Today's screenings</button>
+        <button type="button" class="nav-link sup-only hidden" id="navRecords" onclick="openRecords()">Patient records</button>
+        <button type="button" class="nav-link sup-only hidden" id="navStaff" onclick="openStaff()">Staff</button>
+      </nav>
+
+      <div class="dd user-dd">
+        <button type="button" id="userBtn" aria-haspopup="true" aria-expanded="false">
+          <span id="userName">Account</span> <svg class="ic"><use href="#i-chevron"/></svg>
+        </button>
+        <div class="dd-menu right" hidden>
+          <button type="button" onclick="showAccount()">My account</button>
+          <button type="button" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <div id="screenView" class="view active">
+      <div class="page-head"><h2>New screening</h2></div>
+
+      <div class="step-head">
+        <h3 id="stepTitle">Patient details</h3>
+        <span class="helper" id="stepCount">Step 1 of 3</span>
+      </div>
+
+      <div class="panel">
+        <div class="sec">
+
+          <div class="step-pane" data-step="1">
+            <div class="seg mode-switch" role="group" aria-label="Patient type">
+              <button type="button" id="modeNew" class="on" onclick="setPatientMode('new')">New patient</button>
+              <button type="button" id="modeReturning" onclick="setPatientMode('returning')">Returning patient</button>
+            </div>
+
+            <div id="newPanel">
+              <div class="field">
+                <label for="pName">Full name</label>
+                <input type="text" id="pName" placeholder="Enter patient's name" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="pAge">Age (years)</label>
+                <input type="number" id="pAge" min="0" max="120" placeholder="Enter age">
+              </div>
+              <div class="field">
+                <label for="pSex">Sex</label>
+                <select id="pSex">
+                  <option value="">Select sex</option>
+                  <option>Female</option>
+                  <option>Male</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="pPhone">Phone <small>(optional)</small></label>
+                <input type="tel" id="pPhone" placeholder="Enter phone number" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="pAddress">Address or village <small>(optional)</small></label>
+                <input type="text" id="pAddress" placeholder="Enter address or village" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="hidden" id="returningPanel">
+              <div class="field" style="margin-bottom:0">
+                <label for="lookupId">Patient ID</label>
+                <div class="lookup-row">
+                  <input type="text" id="lookupId" placeholder="TB-2026-0001" autocomplete="off">
+                  <button type="button" class="btn btn-secondary" id="findBtn" onclick="findPatient()">Find</button>
+                </div>
+              </div>
+              <p class="error-msg" id="lookupError"></p>
+
+              <div class="found hidden" id="foundBox">
+                <dl class="kv">
+                  <div><dt>Name</dt><dd id="fName"></dd></div>
+                  <div><dt>Sex</dt><dd id="fSex"></dd></div>
+                  <div><dt>Patient ID</dt><dd id="fId"></dd></div>
+                  <div><dt>Registered</dt><dd id="fReg"></dd></div>
+                </dl>
+                <div class="field">
+                  <label for="fAge">Age now</label>
+                  <input type="number" id="fAge" min="0" max="120">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-pane hidden" data-step="2">
+            <p class="helper" style="margin-bottom:14px">Leave blank any measurement you could not take.</p>
+            <div class="fields-2">
+              <div class="field">
+                <label for="vWeight">Weight (kg)</label>
+                <input type="number" id="vWeight" inputmode="decimal" step="0.1" placeholder="Enter weight">
+              </div>
+              <div class="field">
+                <label for="vHeight">Height (cm)</label>
+                <input type="number" id="vHeight" inputmode="decimal" step="0.1" placeholder="Enter height">
+              </div>
+              <div class="field">
+                <label for="vSys">BP systolic (mmHg)</label>
+                <input type="number" id="vSys" inputmode="numeric" step="1" placeholder="e.g. upper number">
+              </div>
+              <div class="field">
+                <label for="vDia">BP diastolic (mmHg)</label>
+                <input type="number" id="vDia" inputmode="numeric" step="1" placeholder="e.g. lower number">
+              </div>
+              <div class="field">
+                <label for="vTemp">Temperature (&deg;C)</label>
+                <input type="number" id="vTemp" inputmode="decimal" step="0.1" placeholder="Enter temperature">
+              </div>
+              <div class="field">
+                <label for="vPulse">Pulse (beats/min)</label>
+                <input type="number" id="vPulse" inputmode="numeric" step="1" placeholder="Enter pulse">
+              </div>
+              <div class="field">
+                <label for="vSpo2">Oxygen saturation (%)</label>
+                <input type="number" id="vSpo2" inputmode="numeric" step="1" placeholder="Enter SpO2">
+              </div>
+            </div>
+            <p class="bmi" id="bmiLine"></p>
+          </div>
+
+          <div class="step-pane hidden" data-step="3">
+            <h3 class="sub-head">Chest X-ray</h3>
+            <div class="upload" id="dropzone">
+              <div class="upload-empty" id="uploadEmpty">
+                <button type="button" class="btn btn-secondary" id="chooseBtn">
+                  <svg class="ic"><use href="#i-upload"/></svg> Choose X-ray
+                </button>
+                <span class="muted">No file selected</span>
+              </div>
+              <div class="preview hidden" id="preview">
+                <img class="preview-img" id="previewImg" alt="Chest X-ray preview">
+                <div class="preview-info">
+                  <div class="fname" id="fileName"></div>
+                  <div class="fmeta" id="fileMeta"></div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="replaceBtn">Replace image</button>
+                </div>
+              </div>
+              <input type="file" id="xrayInput" accept="image/jpeg,image/png" hidden>
+            </div>
+            <p class="upload-hint">Upload PA chest X-ray &middot; JPG or PNG &middot; up to 10 MB</p>
+            <p class="error-msg" id="xrayError"></p>
+
+            <h3 class="sub-head sub-gap">Symptoms</h3>
+            <div id="questionList"></div>
+          </div>
+
+          <p class="error-msg" id="formError" role="alert"></p>
+          <div class="step-actions">
+            <button type="button" class="btn btn-secondary hidden" id="backBtn" onclick="prevStep()">Back</button>
+            <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">Continue</button>
+            <button type="button" class="btn btn-primary hidden" id="runBtn" onclick="runScreening()">Run screening</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="resultView" class="view">
+      <div class="panel">
+        <div class="report-top">
+          <div>
+            <h2 id="rName"></h2>
+            <p class="helper" id="rSaved"></p>
+          </div>
+          <div class="ref">Report no.<b id="rRef"></b></div>
+        </div>
+
+        <div class="report-meta">
+          <dl class="kv">
+            <div><dt>Patient ID</dt><dd id="rId"></dd></div>
+            <div><dt>Age</dt><dd id="rAge"></dd></div>
+            <div><dt>Sex</dt><dd id="rSex"></dd></div>
+            <div><dt>Screened</dt><dd id="rDate"></dd></div>
+            <div><dt>Screened by</dt><dd id="rBy"></dd></div>
+          </dl>
+        </div>
+
+        <div class="sec" id="rVitalsSec">
+          <div class="sec-head"><h3>Vitals</h3></div>
+          <dl class="kv" id="rVitals"></dl>
+        </div>
+
+        <div class="sec">
+          <div class="sec-head"><h3>Screening result</h3></div>
+          <div class="verdict" id="verdict">
+            <div class="v-main" id="vMain"></div>
+            <div class="v-conf">Model confidence: <b id="vConf"></b></div>
+            <p class="v-note" id="vNote"></p>
+          </div>
+          <table class="tbl plain scores">
+            <tbody>
+              <tr><td>X-ray model (70%)</td><td id="sImage"></td></tr>
+              <tr><td>Symptom score (30%)</td><td id="sSymptom"></td></tr>
+              <tr><td>Combined score</td><td id="sCombined"></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="sec">
+          <div class="sec-head"><h3>Imaging</h3></div>
+          <div class="images">
+            <figure>
+              <div class="img-box"><img id="rXray" alt="Submitted chest X-ray"></div>
+              <figcaption>Submitted X-ray</figcaption>
+            </figure>
+            <figure>
+              <div class="img-box"><img id="rHeatmap" alt="Model attention map"></div>
+              <figcaption>Attention map. Warmer areas influenced the result most.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-head"><h3>Reported symptoms</h3><span class="helper" id="symCount"></span></div>
+          <table class="tbl plain" id="symTable"></table>
+        </div>
+      </div>
+
+      <div class="result-actions">
+        <button type="button" class="btn btn-secondary" onclick="newScreening()">
+          <svg class="ic"><use href="#i-back"/></svg> New screening
+        </button>
+        <button type="button" class="btn btn-primary" onclick="printReport()">
+          <svg class="ic"><use href="#i-printer"/></svg> Print report
+        </button>
+      </div>
+    </div>
+
+    <div id="todayView" class="view">
+      <div class="page-head">
+        <div>
+          <h2>Today's screenings</h2>
+          <p class="helper" id="todaySummary"></p>
+        </div>
+      </div>
+
+      <div class="panel" id="todayFilled">
+        <div class="table-wrap">
+          <table class="tbl click">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Patient</th>
+                <th>Result</th>
+                <th>Confidence</th>
+                <th>Screened by</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="todayBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel empty hidden" id="todayEmpty">
+        <h3>No screenings today</h3>
+        <p>Today's reports will be listed here.</p>
+        <button type="button" class="btn btn-primary" onclick="newScreening()">New screening</button>
+      </div>
+    </div>
+
+    <div id="recordsLockView" class="view">
+      <div class="auth-card" style="margin: 24px auto 0">
+        <h2 style="font-size:22px">Open patient records</h2>
+        <p class="helper" style="margin: 4px 0 18px">Enter your password. Records lock again after 15 minutes of no activity.</p>
+        <form id="recordsForm" novalidate>
+          <div class="field">
+            <label for="recPassword">Password</label>
+            <input type="password" id="recPassword" autocomplete="current-password">
+          </div>
+          <p class="error-msg" id="recordsError"></p>
+          <button type="submit" class="btn btn-primary btn-block" id="recordsBtn">Continue</button>
+        </form>
+      </div>
+    </div>
+    <div id="recordsView" class="view">
+      <div class="page-head">
+        <h2>Patient records</h2>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="lockRecords()">Lock records</button>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="Filter">
+            <button type="button" class="on" data-filter="all" onclick="setRecordsFilter('all')">All<span id="cAll">0</span></button>
+            <button type="button" data-filter="positive" onclick="setRecordsFilter('positive')">Positive<span id="cPositive">0</span></button>
+            <button type="button" data-filter="due" onclick="setRecordsFilter('due')">Check-up due<span id="cDue">0</span></button>
+          </div>
+          <input type="search" id="recSearch" placeholder="Search name or patient ID" aria-label="Search patients">
+        </div>
+        <div class="table-wrap">
+          <table class="tbl click">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Age / sex</th>
+                <th>Screenings</th>
+                <th>Last result</th>
+                <th>Last screened</th>
+                <th>Next check-up</th>
+              </tr>
+            </thead>
+            <tbody id="recBody"></tbody>
+          </table>
+        </div>
+        <div class="empty hidden" id="recEmpty"><span id="recEmptyText"></span></div>
+      </div>
+    </div>
+
+    <div id="patientView" class="view">
+      <div class="page-head">
+        <button type="button" class="link-btn" onclick="backToRecords()">
+          <svg class="ic"><use href="#i-back"/></svg> All patients
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="lockRecords()">Lock records</button>
+      </div>
+
+      <div class="panel">
+        <div class="p-header">
+          <div>
+            <h2 id="ppName"></h2>
+            <p class="helper" id="ppId"></p>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="screenAgain()">Screen this patient</button>
+        </div>
+        <div class="report-meta">
+          <dl class="kv">
+            <div><dt>Age</dt><dd id="ppAge"></dd></div>
+            <div><dt>Sex</dt><dd id="ppSex"></dd></div>
+            <div><dt>Phone</dt><dd id="ppPhone"></dd></div>
+            <div><dt>Address</dt><dd id="ppAddress"></dd></div>
+            <div><dt>Registered</dt><dd id="ppReg"></dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="sec">
+          <div class="sec-head"><h3>Follow-up</h3><span class="helper" id="ppPositiveNote"></span></div>
+          <div class="checkup-row">
+            <div class="field">
+              <label for="ppCheckup">Next check-up</label>
+              <input type="date" id="ppCheckup">
+            </div>
+            <button type="button" class="btn btn-primary" onclick="saveCheckup()">Save date</button>
+            <button type="button" class="btn btn-secondary" onclick="clearCheckup()">Clear</button>
+            <span class="checkup-status" id="checkupStatus"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="sec" style="border-bottom:none; padding-bottom: 0">
+          <div class="sec-head" style="margin-bottom:0"><h3>Screening history</h3><span class="helper" id="ppCount"></span></div>
+        </div>
+        <div id="ppHistory"></div>
+      </div>
+    </div>
+
+    <div id="staffView" class="view">
+      <div class="page-head"><h2>Staff</h2></div>
+
+      <div class="panel">
+        <div class="sec">
+          <div class="sec-head"><h3>Add staff member</h3></div>
+          <form id="staffForm" novalidate>
+            <div class="staff-form">
+              <div class="field">
+                <label for="stName">Full name</label>
+                <input type="text" id="stName" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="stEmail">Work email</label>
+                <input type="email" id="stEmail" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="stRole">Role</label>
+                <select id="stRole">
+                  <option value="screener">Health worker</option>
+                  <option value="records">Supervisor</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary" id="stBtn">Add</button>
+            </div>
+            <p class="helper">Supervisors can also open patient records and manage staff.</p>
+            <p class="error-msg" id="stError"></p>
+          </form>
+
+          <div class="temp-box hidden" id="tempBox">
+            <div id="tempHead"></div>
+            <div class="temp-pass" id="tempPass"></div>
+            <p>Give this to them in person. They choose their own password at first sign-in. It is not shown again.</p>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="hideTemp()">Done</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="sec" style="border-bottom:none; padding-bottom: 0">
+          <div class="sec-head" style="margin-bottom:0"><h3>Accounts</h3><span class="helper" id="staffCount"></span></div>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl staff-table">
+            <thead>
+              <tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody id="staffBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="accountView" class="view">
+      <div class="page-head"><h2>My account</h2></div>
+
+      <div class="panel">
+        <div class="report-meta">
+          <dl class="kv">
+            <div><dt>Name</dt><dd id="acName"></dd></div>
+            <div><dt>Email</dt><dd id="acEmail"></dd></div>
+            <div><dt>Role</dt><dd id="acRole"></dd></div>
+          </dl>
+        </div>
+        <div class="sec">
+          <div class="sec-head"><h3>Change password</h3></div>
+          <form id="accountPwForm" class="pw-form" novalidate>
+            <div class="field">
+              <label for="acCurrent">Current password</label>
+              <input type="password" id="acCurrent" autocomplete="current-password">
+            </div>
+            <div class="field">
+              <label for="acNew">New password <small>(at least 8 characters)</small></label>
+              <input type="password" id="acNew" autocomplete="new-password">
+            </div>
+            <div class="field">
+              <label for="acNew2">Confirm new password</label>
+              <input type="password" id="acNew2" autocomplete="new-password">
+            </div>
+            <p class="error-msg" id="acError"></p>
+            <button type="submit" class="btn btn-primary" id="acBtn">Update password</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</section>
+
+<div id="printReport"></div>
+
+
+<script>
+  // keys are what flask reads, notebook is the name stored in the database
+  const questions = [
+    { key: "cough",       text: "Cough lasting more than 2 weeks", notebook: "cough_weeks" },
+    { key: "weightLoss",  text: "Unexplained weight loss",         notebook: "weight_loss" },
+    { key: "nightSweats", text: "Night sweats",                    notebook: "night_sweats" },
+    { key: "fever",       text: "Fever",                           notebook: "fever" },
+    { key: "hiv",         text: "HIV positive status",             notebook: "hiv_positive" },
+    { key: "contact",     text: "Known TB contact",                notebook: "tb_contact" }
+  ];
+
+  let lastResult = null;
+  let xrayDataUrl = null;
+  let xrayFile = null;
+  let patientMode = "new";
+  let foundPatient = null;
+  let recordsFilter = "all";
+  let currentPatient = null;
+  let currentUser = null;
+  let todayList = [];
+
+  function $(id) { return document.getElementById(id); }
+
+  // health workers don't see the supervisor links at all
+  function applyRole(user) {
+    const sup = user.role === "records";
+    document.querySelectorAll(".sup-only").forEach(el => el.classList.toggle("hidden", !sup));
+  }
+
+  // vitals: [input id, form key, label, lowest, highest]
+  const vitalFields = [
+    ["vWeight", "weight_kg",     "Weight",            1,  300],
+    ["vHeight", "height_cm",     "Height",            30, 250],
+    ["vSys",    "bp_systolic",   "Systolic BP",       50, 260],
+    ["vDia",    "bp_diastolic",  "Diastolic BP",      30, 160],
+    ["vTemp",   "temperature_c", "Temperature",       30, 45],
+    ["vPulse",  "pulse",         "Pulse",             20, 250],
+    ["vSpo2",   "spo2",          "Oxygen saturation", 50, 100]
+  ];
+
+  function bmiOf(weight, height) {
+    const w = Number(weight), h = Number(height);
+    if (!w || !h) return null;
+    return Math.round(w / ((h / 100) ** 2) * 10) / 10;
+  }
+
+  function hasValue(x) { return x !== null && x !== undefined && x !== ""; }
+
+  // label + text pairs, "–" when a measurement wasn't taken
+  function vitalItems(v) {
+    const bmi = bmiOf(v.weight_kg, v.height_cm);
+    return [
+      ["Weight", hasValue(v.weight_kg) ? v.weight_kg + " kg" : "–"],
+      ["Height", hasValue(v.height_cm) ? v.height_cm + " cm" : "–"],
+      ["BMI", bmi ? bmi.toFixed(1) : "–"],
+      ["Blood pressure", hasValue(v.bp_systolic) && hasValue(v.bp_diastolic) ? v.bp_systolic + "/" + v.bp_diastolic + " mmHg" : "–"],
+      ["Temperature", hasValue(v.temperature_c) ? v.temperature_c + " °C" : "–"],
+      ["Pulse", hasValue(v.pulse) ? v.pulse + " bpm" : "–"],
+      ["Oxygen saturation", hasValue(v.spo2) ? v.spo2 + "%" : "–"]
+    ];
+  }
+
+  // pull the vitals out of a saved screening row
+  function vitalsFromRow(t) {
+    const v = {};
+    vitalFields.forEach(f => { v[f[1]] = t[f[1]]; });
+    return v;
+  }
+
+  function vitalsLine(s) {
+    const parts = vitalItems(vitalsFromRow(s)).filter(i => i[1] !== "–").map(i => i[0] + " " + i[1]);
+    return parts.length ? `<div class="h-meta">${parts.join(" &middot; ")}</div>` : "";
+  }
+
+  // names from the database go through this so they can't break the html
+  function escapeHtml(str) {
+    return String(str ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function formatDate(d) {
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function formatTime(d) {
+    return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  // "2026-10-08" as a local date (new Date() would read it as UTC)
+  function parseDay(str) {
+    const [y, m, d] = str.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function todayStart() {
+    const t = new Date();
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  }
+
+  function checkupTag(dateStr) {
+    if (!dateStr) return '<span class="tag none">Not set</span>';
+    const days = Math.round((parseDay(dateStr) - todayStart()) / 86400000);
+    const label = formatDate(parseDay(dateStr));
+    if (days < 0) return `<span class="tag pos">Overdue &middot; ${label}</span>`;
+    if (days <= 7) return `<span class="tag soon">${days === 0 ? "Today" : "In " + days + " day" + (days > 1 ? "s" : "")} &middot; ${label}</span>`;
+    return label;
+  }
+
+  function resultTag(result) {
+    if (!result) return '<span class="tag none">None</span>';
+    return result === "TB Positive"
+      ? '<span class="tag pos">Positive</span>'
+      : '<span class="tag neg">Negative</span>';
+  }
+
+  // every call to flask goes through here
+  async function api(path, options = {}) {
+    let res;
+    try {
+      res = await fetch(path, options);
+    } catch (e) {
+      throw new Error("Can't reach the screening server. Check that app.py is running.");
+    }
+
+    let data = {};
+    try { data = await res.json(); } catch (e) {}
+
+    if (res.status === 401 && path !== "/api/login") {
+      goToLogin();
+      throw new Error("Your session ended. Sign in again.");
+    }
+    if (res.status === 403 && data.error === "password_change_required") {
+      showPasswordScreen();
+      throw new Error("password_change_required");
+    }
+    if (res.status === 403 && data.error === "records_locked") {
+      showRecordsLock();
+      throw new Error("records_locked");
+    }
+    if (!res.ok) throw new Error(data.error || "Something went wrong.");
+    return data;
+  }
+
+  function postJson(path, body, method = "POST") {
+    return api(path, {
+      method: method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+  }
+
+  // nav and menus
+
+  const mainViews = ["screenView", "resultView", "todayView", "recordsLockView", "recordsView", "patientView", "staffView", "accountView"];
+  const navIds = ["navScreen", "navToday", "navRecords", "navStaff"];
+
+  function closeDropdowns() {
+    document.querySelectorAll(".dd-menu").forEach(m => { m.hidden = true; });
+    document.querySelectorAll(".dd > button").forEach(b => b.setAttribute("aria-expanded", "false"));
+  }
+
+  function closeMenus() {
+    closeDropdowns();
+    $("topbar").classList.remove("open");
+    $("menuToggle").setAttribute("aria-expanded", "false");
+  }
+
+  document.querySelectorAll(".dd > button").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      const menu = btn.nextElementSibling;
+      const wasOpen = !menu.hidden;
+      closeDropdowns();
+      menu.hidden = wasOpen;
+      btn.setAttribute("aria-expanded", String(!wasOpen));
+    });
+  });
+  document.addEventListener("click", closeDropdowns);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDropdowns(); });
+
+  $("menuToggle").addEventListener("click", function () {
+    const open = $("topbar").classList.toggle("open");
+    $("menuToggle").setAttribute("aria-expanded", String(open));
+  });
+
+  function showMain(viewId, navId) {
+    mainViews.forEach(v => $(v).classList.toggle("active", v === viewId));
+    navIds.forEach(function (n) {
+      const on = n === navId;
+      $(n).classList.toggle("current", on);
+      if (on) $(n).setAttribute("aria-current", "page");
+      else $(n).removeAttribute("aria-current");
+    });
+    closeMenus();
+    window.scrollTo(0, 0);
+  }
+
+  // login
+
+  $("loginForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const email = $("email").value.trim();
+    const pass = $("password").value;
+    const err = $("loginError");
+
+    $("email").classList.remove("invalid");
+    $("password").classList.remove("invalid");
+    err.textContent = "";
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      $("email").classList.add("invalid");
+      err.textContent = "Enter a valid email address.";
+      return;
+    }
+    if (!pass) {
+      $("password").classList.add("invalid");
+      err.textContent = "Enter your password.";
+      return;
+    }
+
+    const btn = $("loginBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Signing in';
+
+    try {
+      const user = await postJson("/api/login", { email: email, password: pass });
+      enterApp(user);
+    } catch (error) {
+      err.textContent = error.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Sign in";
+    }
+  });
+
+  // the four full screens: login, setup, choose-password and the app
+  function showScreen(id) {
+    ["loginView", "setupView", "passwordView", "appView"].forEach(v => $(v).classList.toggle("active", v === id));
+    window.scrollTo(0, 0);
+  }
+
+  function enterApp(user) {
+    currentUser = user;
+    $("userName").textContent = user.name;
+    applyRole(user);
+    $("password").value = "";
+    if (user.must_change_password) {
+      showPasswordScreen();
+      return;
+    }
+    showScreen("appView");
+    showScreening();
+  }
+
+  function goToLogin() {
+    resetForm();
+    lastResult = null;
+    currentPatient = null;
+    currentUser = null;
+    showScreen("loginView");
+  }
+
+  async function signOut() {
+    try { await api("/api/logout", { method: "POST" }); } catch (e) {}
+    goToLogin();
+  }
+
+  function showScreening() {
+    showMain("screenView", "navScreen");
+  }
+
+  function showResults() {
+    if (!lastResult) return;
+    showMain("resultView", null);
+  }
+
+  // report numbers look like TBS-20261008-0012
+  function reportRef(screenedAt, screeningId) {
+    return "TBS-" + screenedAt.slice(0, 10).replace(/-/g, "") + "-" + String(screeningId).padStart(4, "0");
+  }
+
+  function newScreening() {
+    resetForm();
+    showScreening();
+  }
+
+  // new patient or returning patient
+
+  function setPatientMode(mode) {
+    patientMode = mode;
+    $("modeNew").classList.toggle("on", mode === "new");
+    $("modeReturning").classList.toggle("on", mode === "returning");
+    $("newPanel").classList.toggle("hidden", mode !== "new");
+    $("returningPanel").classList.toggle("hidden", mode !== "returning");
+    $("formError").textContent = "";
+    if (mode === "returning") $("lookupId").focus();
+  }
+
+  async function findPatient() {
+    const id = $("lookupId").value.trim().toUpperCase();
+    $("lookupError").textContent = "";
+    $("lookupId").classList.remove("invalid");
+    $("foundBox").classList.add("hidden");
+    foundPatient = null;
+
+    if (!id) {
+      $("lookupId").classList.add("invalid");
+      $("lookupError").textContent = "Enter the patient ID.";
+      return;
+    }
+
+    const btn = $("findBtn");
+    btn.disabled = true;
+    try {
+      const p = await api("/api/patients/" + encodeURIComponent(id));
+      foundPatient = p;
+      $("fName").textContent = p.name;
+      $("fSex").textContent = p.sex;
+      $("fAge").value = p.age;
+      $("fId").textContent = p.patient_id;
+      $("fReg").textContent = formatDate(new Date(p.registered_at));
+      $("foundBox").classList.remove("hidden");
+    } catch (error) {
+      $("lookupId").classList.add("invalid");
+      $("lookupError").textContent = error.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  $("lookupId").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); findPatient(); }
+  });
+
+  // symptom rows, built here so the html isn't repeated six times
+
+  function buildQuestions() {
+    const list = $("questionList");
+    list.innerHTML = questions.map(function (q) {
+      return `
+        <div class="q-row" id="row-${q.key}">
+          <div class="q-text">${q.text}</div>
+          <div class="yn" role="radiogroup" aria-label="${q.text}">
+            <input type="radio" name="${q.key}" id="${q.key}-yes" value="yes">
+            <label class="yes" for="${q.key}-yes">Yes</label>
+            <input type="radio" name="${q.key}" id="${q.key}-no" value="no">
+            <label class="no" for="${q.key}-no">No</label>
+          </div>
+        </div>`;
+    }).join("");
+
+    list.addEventListener("change", function (e) {
+      const row = e.target.closest(".q-row");
+      if (row) row.classList.remove("invalid");
+    });
+  }
+
+  function getAnswers() {
+    const answers = {};
+    questions.forEach(function (q) {
+      const picked = document.querySelector(`input[name="${q.key}"]:checked`);
+      answers[q.key] = picked ? picked.value : null;
+    });
+    return answers;
+  }
+
+  // x-ray upload, button or drag and drop
+
+  const dropzone = $("dropzone");
+  const fileInput = $("xrayInput");
+  const okTypes = ["image/jpeg", "image/png"];
+
+  $("chooseBtn").addEventListener("click", () => fileInput.click());
+  $("replaceBtn").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => handleFile(fileInput.files[0]));
+
+  dropzone.addEventListener("dragover", function (e) {
+    e.preventDefault();
+    dropzone.classList.add("dragging");
+  });
+  dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragging"));
+  dropzone.addEventListener("drop", function (e) {
+    e.preventDefault();
+    dropzone.classList.remove("dragging");
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  function handleFile(file) {
+    if (!file) return;
+    $("xrayError").textContent = "";
+
+    if (!okTypes.includes(file.type)) {
+      $("xrayError").textContent = "Unsupported file. Use a JPG or PNG image.";
+      fileInput.value = "";
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      $("xrayError").textContent = "The image is larger than 10 MB.";
+      fileInput.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      xrayFile = file;
+      xrayDataUrl = e.target.result;
+      $("previewImg").src = xrayDataUrl;
+      $("fileName").textContent = file.name;
+      $("fileMeta").textContent = (file.size / 1024 / 1024).toFixed(2) + " MB, " + file.type.replace("image/", "").toUpperCase();
+      $("uploadEmpty").classList.add("hidden");
+      $("preview").classList.remove("hidden");
+      dropzone.classList.remove("invalid");
+      $("formError").textContent = "";
+    };
+    reader.onerror = function () {
+      $("xrayError").textContent = "Could not read that file. Try again.";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearImage() {
+    xrayDataUrl = null;
+    xrayFile = null;
+    fileInput.value = "";
+    $("xrayError").textContent = "";
+    $("preview").classList.add("hidden");
+    $("uploadEmpty").classList.remove("hidden");
+  }
+
+  // steps of the screening form
+
+  const stepNames = ["Patient details", "Vitals", "X-ray and symptoms"];
+  let step = 1;
+
+  function goStep(n) {
+    step = n;
+    document.querySelectorAll(".step-pane").forEach(p => p.classList.toggle("hidden", Number(p.dataset.step) !== n));
+    $("stepTitle").textContent = stepNames[n - 1];
+    $("stepCount").textContent = "Step " + n + " of " + stepNames.length;
+    $("backBtn").classList.toggle("hidden", n === 1);
+    $("nextBtn").classList.toggle("hidden", n === stepNames.length);
+    $("runBtn").classList.toggle("hidden", n !== stepNames.length);
+    $("formError").textContent = "";
+    window.scrollTo(0, 0);
+  }
+
+  function nextStep() {
+    if (validateStep(step)) goStep(step + 1);
+  }
+
+  function prevStep() {
+    goStep(step - 1);
+  }
+
+  function updateBmi() {
+    const b = bmiOf($("vWeight").value, $("vHeight").value);
+    $("bmiLine").textContent = b ? "BMI: " + b.toFixed(1) : "";
+  }
+  $("vWeight").addEventListener("input", updateBmi);
+  $("vHeight").addEventListener("input", updateBmi);
+
+  function badAge(value) {
+    const age = Number(value);
+    return value === "" || !Number.isInteger(age) || age < 0 || age > 120;
+  }
+
+  // returns an error message, or "" when the vitals are fine (blank is fine)
+  function checkVitals() {
+    let msg = "";
+    vitalFields.forEach(function (f) {
+      const el = $(f[0]);
+      const raw = el.value.trim();
+      let bad = false;
+      if (raw !== "") {
+        const n = Number(raw);
+        bad = !Number.isFinite(n) || n < f[3] || n > f[4];
+        if (bad && !msg) msg = f[2] + " should be between " + f[3] + " and " + f[4] + ".";
+      }
+      el.classList.toggle("invalid", bad);
+    });
+
+    const sys = $("vSys").value.trim();
+    const dia = $("vDia").value.trim();
+    if (!msg && (sys === "") !== (dia === "")) {
+      $(sys === "" ? "vSys" : "vDia").classList.add("invalid");
+      msg = "Enter both blood pressure numbers or leave both blank.";
+    }
+    if (!msg && sys !== "" && Number(dia) >= Number(sys)) {
+      $("vDia").classList.add("invalid");
+      msg = "Diastolic pressure should be lower than systolic.";
+    }
+    return msg;
+  }
+
+  function validateStep(n) {
+    let ok = true;
+    let msg = "Complete the fields marked in red.";
+
+    if (n === 1) {
+      if (patientMode === "new") {
+        ["pName", "pSex"].forEach(function (id) {
+          const empty = $(id).value.trim() === "";
+          $(id).classList.toggle("invalid", empty);
+          if (empty) ok = false;
+        });
+        const ageBad = badAge($("pAge").value);
+        $("pAge").classList.toggle("invalid", ageBad);
+        if (ageBad) ok = false;
+      } else if (!foundPatient) {
+        $("lookupId").classList.add("invalid");
+        $("lookupError").textContent = "Find the patient first.";
+        ok = false;
+      } else {
+        const ageBad = badAge($("fAge").value);
+        $("fAge").classList.toggle("invalid", ageBad);
+        if (ageBad) ok = false;
+      }
+    }
+
+    if (n === 2) {
+      const problem = checkVitals();
+      if (problem) { ok = false; msg = problem; }
+    }
+
+    if (n === 3) {
+      if (!xrayDataUrl) {
+        dropzone.classList.add("invalid");
+        ok = false;
+      }
+      const answers = getAnswers();
+      questions.forEach(function (q) {
+        const missing = answers[q.key] === null;
+        $("row-" + q.key).classList.toggle("invalid", missing);
+        if (missing) ok = false;
+      });
+      msg = !xrayDataUrl ? "Select a chest X-ray and answer every symptom." : "Answer every symptom.";
+    }
+
+    $("formError").textContent = ok ? "" : msg;
+    return ok;
+  }
+
+  // clear the red border as soon as they type
+  ["pName", "pAge", "pSex", "fAge", "lookupId"].concat(vitalFields.map(f => f[0])).forEach(function (id) {
+    $(id).addEventListener("input", () => $(id).classList.remove("invalid"));
+  });
+
+  // send everything to flask and wait
+
+  async function runScreening() {
+    // check every step, jump back to the first one with a problem
+    for (let s = 1; s <= stepNames.length; s++) {
+      if (!validateStep(s)) {
+        const msg = $("formError").textContent;
+        goStep(s);
+        $("formError").textContent = msg;
+        const firstBad = document.querySelector("#screenView .invalid");
+        if (firstBad) firstBad.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+    }
+
+    const answers = getAnswers();
+
+    const vitals = {};
+    vitalFields.forEach(function (f) {
+      const v = $(f[0]).value.trim();
+      vitals[f[1]] = v === "" ? null : Number(v);
+    });
+
+    const formData = new FormData();
+    formData.append("xray", xrayFile);
+    formData.append("patient_type", patientMode);
+    if (patientMode === "new") {
+      formData.append("name", $("pName").value.trim());
+      formData.append("phone", $("pPhone").value.trim());
+      formData.append("address", $("pAddress").value.trim());
+      formData.append("age", $("pAge").value);
+      formData.append("sex", $("pSex").value);
+    } else {
+      formData.append("patient_id", foundPatient.patient_id);
+      formData.append("age", $("fAge").value);
+    }
+    for (const key in vitals) {
+      if (vitals[key] !== null) formData.append(key, vitals[key]);
+    }
+    for (const key in answers) {
+      formData.append(key, answers[key]);
+    }
+
+    const btn = $("runBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Analysing X-ray';
+    $("formError").textContent = "";
+
+    try {
+      const data = await api("/predict", { method: "POST", body: formData });
+      const when = new Date(data.screened_at);
+
+      lastResult = {
+        fresh: true,
+        vitals: vitals,
+        name: data.patient_name,
+        id: data.patient_id,
+        age: data.age,
+        sex: data.sex,
+        isNew: data.is_new,
+        date: when,
+        ref: reportRef(data.screened_at, data.screening_id),
+        answers: answers,
+        positive: data.result === "TB Positive",
+        confidence: data.confidence,
+        heatmap: data.heatmap,
+        imageScore: data.image_score,
+        symptomScore: data.symptom_score,
+        combinedScore: data.combined_score,
+        screenedBy: $("userName").textContent,
+        xray: xrayDataUrl
+      };
+
+      fillResults();
+      resetForm();
+      showResults();
+    } catch (error) {
+      $("formError").textContent = error.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Run screening";
+    }
+  }
+
+  // wording that goes with the result, used on screen and in print
+  function resultNote(positive) {
+    return positive
+      ? "Model-generated screening result, not a confirmed diagnosis. Refer for confirmatory testing and clinical review."
+      : "Model-generated screening result, not a confirmed diagnosis. A negative result does not rule out TB. Refer for clinical assessment if symptoms continue.";
+  }
+
+  function fillResults() {
+    const r = lastResult;
+
+    $("rName").textContent = r.name;
+    $("rSaved").textContent = r.fresh
+      ? (r.isNew ? "New patient registered" : "Added to patient record")
+      : "";
+    $("rSaved").classList.toggle("hidden", !r.fresh);
+    $("rRef").textContent = r.ref;
+    $("rId").textContent = r.id;
+    $("rAge").textContent = r.age + " years";
+    $("rSex").textContent = r.sex;
+    $("rDate").textContent = formatDate(r.date) + ", " + formatTime(r.date);
+    $("rBy").textContent = r.screenedBy || "–";
+
+    const verdict = $("verdict");
+    verdict.classList.remove("positive", "negative");
+    verdict.classList.add(r.positive ? "positive" : "negative");
+    $("vMain").textContent = r.positive ? "Screening positive" : "Screening negative";
+    $("vConf").textContent = r.confidence;
+    $("vNote").textContent = resultNote(r.positive);
+
+    $("sImage").textContent = r.imageScore.toFixed(2);
+    $("sSymptom").textContent = r.symptomScore.toFixed(2);
+    $("sCombined").textContent = r.combinedScore.toFixed(2);
+
+    const vitalList = vitalItems(r.vitals);
+    $("rVitals").innerHTML = vitalList.map(i => `<div><dt>${i[0]}</dt><dd>${i[1]}</dd></div>`).join("");
+    $("rVitalsSec").classList.toggle("hidden", vitalList.every(i => i[1] === "–"));
+
+    $("rXray").src = r.xray;
+    $("rHeatmap").src = r.heatmap;
+
+    let yesCount = 0;
+    $("symTable").innerHTML = "<tbody>" + questions.map(function (q) {
+      const yes = r.answers[q.key] === "yes";
+      if (yes) yesCount++;
+      return `<tr><td>${q.text}</td><td style="text-align:right"><span class="tag ${yes ? "yes" : "none"}">${yes ? "Yes" : "No"}</span></td></tr>`;
+    }).join("") + "</tbody>";
+    $("symCount").textContent = yesCount + " of " + questions.length + " reported";
+  }
+
+  // build the print version then open the print dialog
+
+  function printReport() {
+    if (!lastResult) return;
+    const r = lastResult;
+
+    const rows = questions.map(q =>
+      `<tr><td>${q.text}</td><td>${r.answers[q.key] === "yes" ? "Yes" : "No"}</td></tr>`
+    ).join("");
+
+    const vitalList = vitalItems(r.vitals);
+    const hasVitals = vitalList.some(i => i[1] !== "–");
+    const vitalCells = vitalList.map(i => `<div><dt>${i[0]}</dt><dd>${i[1]}</dd></div>`).join("");
+
+    $("printReport").innerHTML = `
+      <div class="pr-head">
+        <div class="pr-brand">
+          <img src="/static/logo.png" alt="" onerror="this.remove()">
+          <div>
+            <h1>TB Screening System</h1>
+            <p>Screening report</p>
+          </div>
+        </div>
+        <div class="pr-ref">
+          Report no. <b>${r.ref}</b><br>
+          ${formatDate(r.date)}, ${formatTime(r.date)}
+        </div>
+      </div>
+
+      <dl class="pr-patient">
+        <div><dt>Patient name</dt><dd>${escapeHtml(r.name)}</dd></div>
+        <div><dt>Patient ID</dt><dd>${escapeHtml(r.id)}</dd></div>
+        <div><dt>Age</dt><dd>${r.age} years</dd></div>
+        <div><dt>Sex</dt><dd>${escapeHtml(r.sex)}</dd></div>
+      </dl>
+
+      ${hasVitals ? `<div class="pr-label">Vitals</div><dl class="pr-patient">${vitalCells}</dl>` : ""}
+
+      <div class="pr-label">Screening result</div>
+      <div class="pr-result ${r.positive ? "positive" : "negative"}">
+        <div class="r-main">${r.positive ? "Screening positive" : "Screening negative"}</div>
+        <div class="r-conf">Model confidence: <b>${escapeHtml(r.confidence)}</b></div>
+      </div>
+
+      <div class="pr-label">Imaging</div>
+      <div class="pr-images">
+        <figure><img src="${r.xray}" alt="Chest X-ray"><figcaption>Submitted chest X-ray</figcaption></figure>
+        <figure><img src="${r.heatmap}" alt="Attention map"><figcaption>Attention map. Warmer areas influenced the result most.</figcaption></figure>
+      </div>
+
+      <div class="pr-label">Symptoms</div>
+      <table class="pr-table">${rows}</table>
+
+      <div class="pr-sign">
+        <div>Screened by: ${escapeHtml(r.screenedBy || "")}</div>
+        <div>Reviewing clinician signature</div>
+      </div>
+
+      <div class="pr-foot">${resultNote(r.positive)}</div>`;
+
+    // images from today's list load from flask, wait for them or they print blank
+    const imgs = Array.from($("printReport").querySelectorAll("img"));
+    Promise.all(imgs.map(img => img.complete ? Promise.resolve() :
+      new Promise(done => { img.onload = done; img.onerror = done; })
+    )).then(() => window.print());
+  }
+
+  function resetForm() {
+    ["pName", "pPhone", "pAddress", "pAge", "pSex", "lookupId", "fAge"].concat(vitalFields.map(f => f[0])).forEach(id => {
+      $(id).value = "";
+      $(id).classList.remove("invalid");
+    });
+    foundPatient = null;
+    $("foundBox").classList.add("hidden");
+    $("lookupError").textContent = "";
+    setPatientMode("new");
+    document.querySelectorAll("#questionList input").forEach(i => (i.checked = false));
+    document.querySelectorAll(".q-row").forEach(r => r.classList.remove("invalid"));
+    dropzone.classList.remove("invalid");
+    $("formError").textContent = "";
+    clearImage();
+    updateBmi();
+    goStep(1);
+  }
+
+  // today's screenings
+
+  async function openToday() {
+    let data;
+    try {
+      data = await api("/api/today");
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
+    todayList = data.screenings;
+
+    const pos = todayList.filter(t => t.result === "TB Positive").length;
+    $("todaySummary").textContent = todayList.length
+      ? formatDate(parseDay(data.date)) + ": " + todayList.length + " screened, " + pos + " positive, " + (todayList.length - pos) + " negative"
+      : formatDate(parseDay(data.date));
+
+    $("todayBody").innerHTML = todayList.map(t => `
+      <tr data-id="${t.id}">
+        <td>${formatTime(new Date(t.screened_at))}</td>
+        <td><div class="p-name">${escapeHtml(t.name)}</div><div class="p-id">${escapeHtml(t.patient_id)}</div></td>
+        <td>${resultTag(t.result)}</td>
+        <td>${escapeHtml(t.confidence)}</td>
+        <td>${escapeHtml(t.screened_by || "–")}</td>
+        <td>
+          <div class="row-actions">
+            <button type="button" class="btn btn-secondary btn-sm" data-act="view">View</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-act="print">Print</button>
+          </div>
+        </td>
+      </tr>`).join("");
+
+    const empty = todayList.length === 0;
+    $("todayFilled").classList.toggle("hidden", empty);
+    $("todayEmpty").classList.toggle("hidden", !empty);
+
+    showMain("todayView", "navToday");
+  }
+
+  // a saved screening in the same shape the report page uses
+  function resultFromSaved(t) {
+    const answers = {};
+    questions.forEach(q => { answers[q.key] = t.symptoms[q.notebook] === 1 ? "yes" : "no"; });
+    return {
+      fresh: false,
+      vitals: vitalsFromRow(t),
+      name: t.name,
+      id: t.patient_id,
+      age: t.age_at_screening,
+      sex: t.sex,
+      isNew: t.is_new,
+      date: new Date(t.screened_at),
+      ref: reportRef(t.screened_at, t.id),
+      answers: answers,
+      positive: t.result === "TB Positive",
+      confidence: t.confidence,
+      imageScore: t.image_score,
+      symptomScore: t.symptom_score,
+      combinedScore: t.combined_score,
+      screenedBy: t.screened_by,
+      xray: t.xray_url,
+      heatmap: t.heatmap_url
+    };
+  }
+
+  $("todayBody").addEventListener("click", function (e) {
+    const row = e.target.closest("tr");
+    if (!row) return;
+    const t = todayList.find(item => String(item.id) === row.dataset.id);
+    if (!t) return;
+
+    lastResult = resultFromSaved(t);
+    fillResults();
+    if (e.target.closest("[data-act=print]")) {
+      printReport();
+    } else {
+      showResults();
+    }
+  });
+
+  // supervisor pages need their own sign-in
+
+  function showRecordsLock() {
+    $("recPassword").value = "";
+    $("recordsError").textContent = "";
+    showMain("recordsLockView", "navRecords");
+  }
+
+  // clicking the menu item just tries to load, flask says if it's locked
+  function openRecords() {
+    loadRecords().catch(() => {});
+  }
+
+  function openStaff() {
+    loadStaff().catch(() => {});
+  }
+
+  $("recordsForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const err = $("recordsError");
+    err.textContent = "";
+
+    const pass = $("recPassword").value;
+    if (!pass) {
+      err.textContent = "Enter your password.";
+      return;
+    }
+
+    const btn = $("recordsBtn");
+    btn.disabled = true;
+    try {
+      await postJson("/api/records/unlock", { password: pass });
+      $("recPassword").value = "";
+      await loadRecords();
+    } catch (error) {
+      err.textContent = error.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  async function lockRecords() {
+    try { await api("/api/records/lock", { method: "POST" }); } catch (e) {}
+    currentPatient = null;
+    showRecordsLock();
+  }
+
+  // patient list
+
+  function setRecordsFilter(f) {
+    recordsFilter = f;
+    document.querySelectorAll("#recordsView .seg button").forEach(c => c.classList.toggle("on", c.dataset.filter === f));
+    loadRecords().catch(() => {});
+  }
+
+  // wait until they stop typing
+  let searchTimer = null;
+  $("recSearch").addEventListener("input", function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadRecords().catch(() => {}), 250);
+  });
+
+  async function loadRecords() {
+    const q = $("recSearch").value.trim();
+    const data = await api(`/api/records/patients?filter=${recordsFilter}&q=${encodeURIComponent(q)}`);
+
+    $("cAll").textContent = data.counts.all;
+    $("cPositive").textContent = data.counts.positive;
+    $("cDue").textContent = data.counts.due;
+
+    const rows = data.patients;
+    $("recBody").innerHTML = rows.map(p => `
+      <tr data-id="${escapeHtml(p.patient_id)}">
+        <td><div class="p-name">${escapeHtml(p.name)}</div><div class="p-id">${escapeHtml(p.patient_id)}</div></td>
+        <td>${p.age ?? "–"} / ${escapeHtml(p.sex ? p.sex[0] : "–")}</td>
+        <td>${p.screening_count}${p.positive_count ? ` <span class="tag pos">${p.positive_count} positive</span>` : ""}</td>
+        <td>${resultTag(p.last_result)}</td>
+        <td>${p.last_screened ? formatDate(new Date(p.last_screened)) : "–"}</td>
+        <td>${checkupTag(p.next_checkup)}</td>
+      </tr>`).join("");
+
+    const empty = rows.length === 0;
+    $("recEmpty").classList.toggle("hidden", !empty);
+    if (empty) {
+      $("recEmptyText").textContent = q
+        ? "No patients match that search."
+        : recordsFilter === "positive" ? "No positive screenings."
+        : recordsFilter === "due" ? "No check-ups due in the next 7 days."
+        : "No patients yet.";
+    }
+
+    showMain("recordsView", "navRecords");
+  }
+
+  $("recBody").addEventListener("click", function (e) {
+    const row = e.target.closest("tr");
+    if (row) openPatient(row.dataset.id);
+  });
+
+  function backToRecords() {
+    loadRecords().catch(() => {});
+  }
+
+  // one patient and their history
+
+  async function openPatient(patientId) {
+    let data;
+    try {
+      data = await api("/api/records/patients/" + encodeURIComponent(patientId));
+    } catch (error) {
+      if (error.message !== "records_locked") alert(error.message);
+      return;
+    }
+
+    const p = data.patient;
+    currentPatient = p;
+
+    $("ppName").textContent = p.name;
+    $("ppId").textContent = p.patient_id;
+    $("ppAge").textContent = p.age != null ? p.age + " years" : "–";
+    $("ppSex").textContent = p.sex || "–";
+    $("ppPhone").textContent = p.phone || "–";
+    $("ppAddress").textContent = p.address || "–";
+    $("ppReg").textContent = formatDate(new Date(p.registered_at));
+
+    $("ppCheckup").value = p.next_checkup || "";
+    $("checkupStatus").className = "checkup-status";
+    $("checkupStatus").innerHTML = p.next_checkup ? checkupTag(p.next_checkup) : "No check-up scheduled.";
+
+    const positives = data.screenings.filter(s => s.result === "TB Positive").length;
+    $("ppPositiveNote").textContent = positives
+      ? `Positive in ${positives} of ${data.screenings.length} screening${data.screenings.length > 1 ? "s" : ""}`
+      : "";
+
+    $("ppCount").textContent = data.screenings.length + " total";
+    $("ppHistory").innerHTML = data.screenings.length
+      ? data.screenings.map(historyItem).join("")
+      : '<div class="empty">No screenings yet.</div>';
+
+    showMain("patientView", "navRecords");
+  }
+
+  function historyItem(s) {
+    const when = new Date(s.screened_at);
+    const yes = questions.filter(q => s.symptoms[q.notebook] === 1);
+    const symptomTags = yes.length
+      ? yes.map(q => `<span class="tag yes">${q.text}</span>`).join("")
+      : '<span class="tag none">No symptoms reported</span>';
+
+    return `
+      <div class="h-item">
+        <div class="h-info">
+          <div class="h-top">
+            <span class="h-date">${formatDate(when)}, ${formatTime(when)}</span>
+            ${resultTag(s.result)}
+          </div>
+          <div class="h-meta">
+            Confidence <b>${escapeHtml(s.confidence)}</b> &middot;
+            X-ray <b>${Number(s.image_score).toFixed(2)}</b> &middot;
+            Symptoms <b>${Number(s.symptom_score).toFixed(2)}</b> &middot;
+            Combined <b>${Number(s.combined_score).toFixed(2)}</b>
+          </div>
+          <div class="h-meta">Age ${s.age_at_screening ?? "–"} &middot; screened by ${escapeHtml(s.screened_by || "–")}</div>
+          ${vitalsLine(s)}
+          <div class="h-symptoms">${symptomTags}</div>
+        </div>
+        <div class="h-thumbs">
+          <a href="${s.xray_url}" target="_blank" rel="noopener"><img src="${s.xray_url}" alt="X-ray">X-ray</a>
+          <a href="${s.heatmap_url}" target="_blank" rel="noopener"><img src="${s.heatmap_url}" alt="Attention map">Attention map</a>
+        </div>
+      </div>`;
+  }
+
+  async function saveCheckup(value) {
+    if (!currentPatient) return;
+    const date = value === undefined ? $("ppCheckup").value : value;
+    const status = $("checkupStatus");
+
+    try {
+      await postJson(`/api/records/patients/${encodeURIComponent(currentPatient.patient_id)}/checkup`,
+        { next_checkup: date || null }, "PUT");
+      currentPatient.next_checkup = date || null;
+      $("ppCheckup").value = date || "";
+      status.className = "checkup-status saved";
+      status.textContent = date ? "Saved." : "Check-up cleared.";
+    } catch (error) {
+      if (error.message !== "records_locked") {
+        status.className = "checkup-status";
+        status.textContent = error.message;
+      }
+    }
+  }
+
+  function clearCheckup() {
+    saveCheckup("");
+  }
+
+  // open the form with this patient already looked up
+  function screenAgain() {
+    if (!currentPatient) return;
+    resetForm();
+    setPatientMode("returning");
+    $("lookupId").value = currentPatient.patient_id;
+    findPatient();
+    showScreening();
+  }
+
+  // first run, create the supervisor account
+
+  $("setupForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const err = $("setupError");
+    err.textContent = "";
+
+    const name = $("setupName").value.trim();
+    const email = $("setupEmail").value.trim();
+    const pass = $("setupPass").value;
+    if (!name) { err.textContent = "Enter your full name."; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = "Enter a valid email address."; return; }
+    if (pass.length < 8) { err.textContent = "Use at least 8 characters."; return; }
+    if (pass !== $("setupPass2").value) { err.textContent = "The passwords don't match."; return; }
+
+    const btn = $("setupBtn");
+    btn.disabled = true;
+    try {
+      const user = await postJson("/api/setup", { name: name, email: email, password: pass });
+      $("setupPass").value = "";
+      $("setupPass2").value = "";
+      enterApp(user);
+    } catch (error) {
+      err.textContent = error.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // temporary password screen
+
+  function showPasswordScreen() {
+    const name = currentUser ? currentUser.name.split(" ")[0] : "";
+    $("pwIntro").textContent = (name ? "Welcome, " + name + ". " : "") +
+      "You signed in with a temporary password. Choose your own to continue.";
+    ["fpCurrent", "fpNew", "fpNew2"].forEach(id => $(id).value = "");
+    $("fpError").textContent = "";
+    showScreen("passwordView");
+  }
+
+  // used by both the first-sign-in screen and the account page
+  async function changePassword(current, next, confirm, errBox, btn) {
+    errBox.textContent = "";
+    errBox.style.color = "";
+    if (!current) { errBox.textContent = "Enter your current password."; return null; }
+    if (next.length < 8) { errBox.textContent = "Use at least 8 characters."; return null; }
+    if (next !== confirm) { errBox.textContent = "The new passwords don't match."; return null; }
+
+    btn.disabled = true;
+    try {
+      return await postJson("/api/account/password", { current_password: current, new_password: next });
+    } catch (error) {
+      errBox.textContent = error.message;
+      return null;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  $("firstPwForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const user = await changePassword($("fpCurrent").value, $("fpNew").value, $("fpNew2").value, $("fpError"), $("fpBtn"));
+    if (user) enterApp(user);
+  });
+
+  const roleNames = { screener: "Health worker", records: "Supervisor" };
+
+  function showAccount() {
+    if (!currentUser) return;
+    $("acName").textContent = currentUser.name;
+    $("acEmail").textContent = currentUser.email;
+    $("acRole").textContent = roleNames[currentUser.role] || currentUser.role;
+    ["acCurrent", "acNew", "acNew2"].forEach(id => $(id).value = "");
+    $("acError").textContent = "";
+    $("acError").style.color = "";
+    showMain("accountView", null);
+  }
+
+  $("accountPwForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const user = await changePassword($("acCurrent").value, $("acNew").value, $("acNew2").value, $("acError"), $("acBtn"));
+    if (user) {
+      ["acCurrent", "acNew", "acNew2"].forEach(id => $(id).value = "");
+      $("acError").style.color = "var(--neg)";
+      $("acError").textContent = "Password updated.";
+    }
+  });
+
+  // staff page
+
+  async function loadStaff() {
+    const data = await api("/api/staff");
+
+    const active = data.staff.filter(u => u.active).length;
+    $("staffCount").textContent = active + " active";
+
+    $("staffBody").innerHTML = data.staff.map(function (u) {
+      const status = !u.active
+        ? '<span class="tag none">Turned off</span>'
+        : u.must_change_password
+          ? '<span class="tag soon">Waiting for first sign-in</span>'
+          : '<span class="tag neg">Active</span>';
+      const isMe = u.id === data.me;
+      return `
+        <tr class="${u.active ? "" : "off"}">
+          <td><div class="p-name">${escapeHtml(u.name)}${isMe ? '<span class="you">(you)</span>' : ""}</div>
+              <div class="p-id">${escapeHtml(u.email)}</div></td>
+          <td>${roleNames[u.role] || escapeHtml(u.role)}</td>
+          <td>${status}</td>
+          <td>
+            <div class="row-actions">
+              ${u.active ? `<button type="button" class="btn btn-secondary btn-sm" onclick="resetStaff(${u.id})">Reset password</button>` : ""}
+              ${isMe ? "" : u.active
+                ? `<button type="button" class="btn btn-secondary btn-sm" onclick="setStaffActive(${u.id}, false)">Turn off</button>`
+                : `<button type="button" class="btn btn-secondary btn-sm" onclick="setStaffActive(${u.id}, true)">Turn on</button>`}
+            </div>
+          </td>
+        </tr>`;
+    }).join("");
+
+    showMain("staffView", "navStaff");
+  }
+
+  function showTemp(data, what) {
+    $("tempHead").textContent = what + " for " + data.name + " (" + data.email + "). Temporary password:";
+    $("tempPass").textContent = data.temp_password;
+    $("tempBox").classList.remove("hidden");
+    $("tempBox").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function hideTemp() {
+    $("tempBox").classList.add("hidden");
+    $("tempPass").textContent = "";
+  }
+
+  $("staffForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const err = $("stError");
+    err.textContent = "";
+    const name = $("stName").value.trim();
+    const email = $("stEmail").value.trim();
+    if (!name) { err.textContent = "Enter the health worker's full name."; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = "Enter a valid email address."; return; }
+
+    const btn = $("stBtn");
+    btn.disabled = true;
+    try {
+      const data = await postJson("/api/staff", { name: name, email: email, role: $("stRole").value });
+      $("stName").value = "";
+      $("stEmail").value = "";
+      $("stRole").value = "screener";
+      await loadStaff();
+      showTemp(data, "Account created");
+    } catch (error) {
+      if (error.message !== "records_locked") err.textContent = error.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  async function resetStaff(id) {
+    if (!confirm("Give this person a new temporary password? Their old password will stop working.")) return;
+    try {
+      const data = await api(`/api/staff/${id}/reset`, { method: "POST" });
+      await loadStaff();
+      showTemp(data, "Password reset");
+    } catch (error) {
+      if (error.message !== "records_locked") alert(error.message);
+    }
+  }
+
+  async function setStaffActive(id, active) {
+    if (!active && !confirm("Turn off this account? They won't be able to sign in.")) return;
+    try {
+      await postJson(`/api/staff/${id}/active`, { active: active }, "PUT");
+      hideTemp();
+      await loadStaff();
+    } catch (error) {
+      if (error.message !== "records_locked") alert(error.message);
+    }
+  }
+
+  // runs on page load
+
+  buildQuestions();
+
+  // check if the system is set up, then if we're still signed in
+  async function startUp() {
+    try {
+      const setup = await (await fetch("/api/setup")).json();
+      if (setup.needs_setup) {
+        showScreen("setupView");
+        $("setupName").focus();
+        return;
+      }
+      const res = await fetch("/api/me");
+      if (res.ok) enterApp(await res.json());
+    } catch (e) {
+      $("loginError").textContent = "Can't reach the screening server. Check that app.py is running.";
+    }
+  }
+  startUp();
+</script>
+</body>
+</html>
