@@ -23,7 +23,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # paths and numbers we might want to tweak
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "model", "mobilenetv2_tb.h5")
+MODEL_PATH = os.path.join(BASE_DIR, "model", "mobilenetv2_clean_seed42.h5")
 
 # everything we save lives in data/ (database + images)
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -287,31 +287,17 @@ def make_temp_password():
 # load the mobilenet model once when the server starts
 
 def build_model():
-    # same Sequential setup as the training notebook, then load weights into it
-    # weights=None so it doesn't try to download imagenet weights (we're offline)
-    base = keras.applications.MobileNetV2(
-        input_shape=(IMG_SIZE, IMG_SIZE, 3), include_top=False, weights=None
-    )
-    base.trainable = False
-
-    model = keras.Sequential([
-        base,
-        keras.layers.GlobalAveragePooling2D(),
-        keras.layers.Dropout(0.3),
-        keras.layers.Dense(1, activation="sigmoid"),
-    ])
-    model.build((None, IMG_SIZE, IMG_SIZE, 3))
-    return model
-
+    base = keras.applications.MobileNetV2(input_shape=(IMG_SIZE, IMG_SIZE, 3), include_top=False, weights=None)
+    x = keras.layers.GlobalAveragePooling2D()(base.output)
+    x = keras.layers.Dropout(0.3)(x)
+    out = keras.layers.Dense(1, activation="sigmoid")(x)
+    return keras.Model(base.input, out)
 
 print("loading model...")
 model = build_model()
 model.load_weights(MODEL_PATH)
-
-base_model = model.layers[0]                              # mobilenetv2 part, outputs 7x7x1280
-dense_weights = model.layers[-1].get_weights()[0][:, 0]   # (1280,) for CAM
-
-# run one fake prediction so the first real request isn't slow
+feature_model = keras.Model(model.input, model.get_layer("out_relu").output)   # the last convolution layer
+dense_weights = model.layers[-1].get_weights()[0][:, 0]
 model.predict(np.zeros((1, IMG_SIZE, IMG_SIZE, 3), dtype="float32"), verbose=0)
 print("model ready")
 
@@ -333,31 +319,59 @@ def preprocess(img_bgr):
     return np.expand_dims(arr, axis=0)  # add batch dimension
 
 
-def predict_with_cam(batch, original_bgr):
-    # get the feature maps from mobilenet, then push them through the rest of the model
-    # so we get the prediction and the CAM from one pass
-    features = base_model(batch, training=False)
-    out = features
-    for layer in model.layers[1:]:
-        out = layer(out, training=False)
-    prob = float(out.numpy()[0][0])
 
-    # CAM = feature maps weighted by the dense layer weights (same as the CAM notebook)
-    fmap = features.numpy()[0]            # (7, 7, 1280)
-    cam = np.dot(fmap, dense_weights)     # (7, 7)
-    cam = cam - cam.min()                 # min-max scale so it still shows when activations are low
+def predict_with_cam(batch, original_bgr):
+    # Run classification on the original preprocessed image
+    prob = float(
+        model(batch, training=False).numpy()[0][0]
+    )
+
+    # Extract the final convolutional feature maps
+    features = feature_model(batch, training=False)
+    fmap = features.numpy()[0]  # (7, 7, 1280)
+
+    # Generate class activation map (CAM)
+    cam = np.dot(fmap, dense_weights)
+
+    # Normalise the CAM values
+    cam = cam - cam.min()
+
     if cam.max() > 0:
         cam = cam / cam.max()
 
-    # blow it up and lay it over the x-ray
+    # Resize the original X-ray and heatmap
     size = 448
-    xray = cv2.resize(original_bgr, (size, size))
-    heat = cv2.resize(cam, (size, size))
-    heat = cv2.applyColorMap(np.uint8(255 * heat), cv2.COLORMAP_JET)
-    overlay = cv2.addWeighted(xray, 0.6, heat, 0.4, 0)
 
+    xray = cv2.resize(
+        original_bgr,
+        (size, size)
+    )
+
+    heat = cv2.resize(
+        cam,
+        (size, size)
+    )
+
+    heat = cv2.applyColorMap(
+        np.uint8(255 * heat),
+        cv2.COLORMAP_JET
+    )
+
+    # Overlay the heatmap on the X-ray
+    overlay = cv2.addWeighted(
+        xray, 0.6,
+        heat, 0.4,
+        0
+    )
+
+    # Convert image to PNG
     ok, buf = cv2.imencode(".png", overlay)
+
+    if not ok:
+        raise RuntimeError("Failed to encode CAM image")
+
     return prob, buf.tobytes()
+
 
 
 # symptom score and confidence label
